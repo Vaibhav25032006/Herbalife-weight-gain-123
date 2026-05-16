@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- =======================
+        BASIC META SETTINGS
+    ======================== -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Page Title -->
+    <title>Pro Mega Clock App</title>
+
+    <!-- =======================
+        CSS LINK (UI DESIGN)
+    ======================== -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- =======================
+        PWA MANIFEST (INSTALLABLE APP)
+    ======================== -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Theme color for mobile browser -->
+    <meta name="theme-color" content="#4CAF50">
+</head>
+
+<body>
+
+    <!-- =======================
+        MAIN APP CONTAINER
+    ======================== -->
+    <div id="app">
+
+        <!-- CLOCK SECTION -->
+        <section id="clock-section">
+
+            <!-- Live Digital Clock -->
+            <div id="clock">00:00:00</div>
+
+            <!-- Date Display -->
+            <div id="date">Loading date...</div>
+
+            <!-- Day Display -->
+            <div id="day">Loading day...</div>
+
+        </section>
+
+        <!-- =======================
+            CONTROL PANEL
+        ======================== -->
+        <section id="controls">
+
+            <button onclick="toggleTheme()">🌙 Theme</button>
+
+            <button onclick="startStopwatch()">⏱ Start</button>
+            <button onclick="stopStopwatch()">⏹ Stop</button>
+            <button onclick="resetStopwatch()">🔄 Reset</button>
+
+            <button onclick="startTimer(60)">⏳ 1 Min Timer</button>
+
+            <button onclick="requestFullscreen()">🖥 Fullscreen</button>
+
+        </section>
+
+        <!-- =======================
+            ALARM INPUT SECTION
+        ======================== -->
+        <section id="alarm-section">
+
+            <h3>Set Alarm</h3>
+
+            <input type="number" id="alarm-hour" placeholder="Hour (24h)">
+            <input type="number" id="alarm-minute" placeholder="Minute">
+
+            <button onclick="setAlarmFromInput()">Set Alarm</button>
+
+        </section>
+
+    </div>
+
+    <!-- =======================
+        JAVASCRIPT FILES (LOGIC)
+    ======================== -->
+
+    <script src="clock.js"></script>
+    <script src="alarm.js"></script>
+    <script src="stopwatch.js"></script>
+    <script src="timer.js"></script>
+    <script src="theme.js"></script>
+    <script src="utils.js"></script>
+
+    <!-- MAIN APP CONTROLLER -->
+    <script src="app.js"></script>
+
+</body>
+</html>
