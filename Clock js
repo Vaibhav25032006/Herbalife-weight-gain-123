@@ -1,0 +1,108 @@
+/*
+========================================
+PRO CLOCK APP - CLOCK ENGINE MODULE
+FILE: clock.js
+ROLE: Only handles real-time clock rendering
+========================================
+*/
+
+(function () {
+    "use strict";
+
+    /*
+    ========================================
+    CLOCK ENGINE CLASS
+    ========================================
+    */
+    class ClockEngine {
+        constructor() {
+            this.clockEl = null;
+            this.dateEl = null;
+            this.dayEl = null;
+
+            this.isRunning = false;
+        }
+
+        /*
+        ========================================
+        INIT CLOCK
+        ========================================
+        */
+        init() {
+            this.clockEl = document.getElementById("clock");
+            this.dateEl = document.getElementById("date");
+            this.dayEl = document.getElementById("day");
+
+            if (!this.clockEl) {
+                console.error("[CLOCK] Element not found!");
+                return;
+            }
+
+            this.isRunning = true;
+            this.updateClock();
+
+            console.log("[CLOCK] Engine started");
+        }
+
+        /*
+        ========================================
+        MAIN CLOCK LOOP (ULTRA SMOOTH)
+        ========================================
+        */
+        updateClock() {
+            if (!this.isRunning) return;
+
+            const now = new Date();
+
+            const hours = this.format(now.getHours());
+            const minutes = this.format(now.getMinutes());
+            const seconds = this.format(now.getSeconds());
+
+            // Update UI
+            this.clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+            this.dateEl.textContent = now.toLocaleDateString();
+            this.dayEl.textContent = now.toLocaleDateString("en-US", {
+                weekday: "long"
+            });
+
+            /*
+            NOTE:
+            requestAnimationFrame gives smooth native-like feel
+            but we still sync with system clock (Date object)
+            */
+            requestAnimationFrame(() => this.updateClock());
+        }
+
+        /*
+        ========================================
+        FORMAT HELPER
+        ========================================
+        */
+        format(value) {
+            return value < 10 ? "0" + value : value;
+        }
+
+        /*
+        ========================================
+        STOP CLOCK (optional future use)
+        ========================================
+        */
+        stop() {
+            this.isRunning = false;
+        }
+    }
+
+    /*
+    ========================================
+    AUTO START CLOCK WHEN FILE LOADS
+    ========================================
+    */
+    window.addEventListener("DOMContentLoaded", () => {
+        const clock = new ClockEngine();
+        clock.init();
+
+        // expose globally if needed
+        window.__CLOCK_ENGINE__ = clock;
+    });
+
+})();
