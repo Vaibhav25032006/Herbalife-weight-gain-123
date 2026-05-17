@@ -1,110 +1,241 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut,
-  signInWithCustomToken,
-  setPersistence,
-  browserLocalPersistence
-} from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
-import { 
-  Camera, CheckCircle2, Clock, Calendar, BarChart3, 
-  Droplets, Utensils, Moon, Zap, User, ArrowLeft, RefreshCcw, FlipHorizontal, ShieldCheck,
-  MessageSquare, Mic, Search, MicOff, ChevronLeft, ChevronRight, LogOut, LogIn, ChevronDown, UserPlus, X, Mail, TrendingUp,
-  LogOut as ExitIcon, Lock, Circle, ExternalLink
-} from 'lucide-react';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import * as THREE from 'three';
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herbalife AI Weight Gain</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-100">
+    <div id="root"></div>
 
-// --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+    <script type="text/babel">
+        // Dummy variables to prevent setup errors if not defined globally
+        window.__firebase_config = window.__firebase_config || '{"apiKey":"","authDomain":"","projectId":"","storageBucket":"","messagingSenderId":"","appId":""}';
+        window.__app_id = window.__app_id || 'herbalife-weight-gain';
 
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'herbalife-weight-gain';
-const apiKey = ""; 
+        // Destructuring required React hooks
+        const { useState, useEffect, useRef, useMemo } = React;
 
-const schedule = [
-  { id: 'h_6am', time: '06:00 AM', hour: 6, mins: 0, title: 'Morning Hydration', detail: '1 Glass Water', type: 'Liquid', icon: <Droplets /> },
-  { id: 'c_630am', time: '06:30 AM', hour: 6, mins: 30, title: 'Morning Club', detail: 'Stretching/Session', type: 'Human', icon: <User /> },
-  { id: 'a_7am', time: '07:00 AM', hour: 7, mins: 0, title: 'Afresh', detail: 'Herbalife Afresh', type: 'Product', icon: <Zap /> },
-  { id: 'b_8am', time: '08:00 AM', hour: 8, mins: 0, title: 'Breakfast', detail: 'Formula-1 (3 scoops) + ShakeMate (2 scoops)', type: 'Product', icon: <Utensils /> },
-  { id: 's_10am', time: '10:00 AM', hour: 10, mins: 0, title: 'Mid-Morning Snack', detail: '2 Bananas or Chiku', type: 'Food', icon: <Utensils /> },
-  { id: 'l_12pm', time: '12:00 PM', hour: 12, mins: 0, title: 'Lunch', detail: '4 Roti + Sabzi + Salad + Curd', type: 'Food', icon: <Utensils /> },
-  { id: 'a_1pm', time: '01:00 PM', hour: 13, mins: 0, title: 'Afresh', detail: '1 Scoop Afresh', type: 'Product', icon: <Zap /> },
-  { id: 'e_4pm', time: '04:00 PM', hour: 16, mins: 0, title: 'Evening Snack', detail: 'Tea + Healthy Snacks', type: 'Food', icon: <Utensils /> },
-  { id: 'e_5pm', time: '05:00 PM', hour: 17, mins: 0, title: 'Evening Nutrition', detail: 'Sprouts, Moong, Chana, Soaked Dry Fruits', type: 'Food', icon: <Zap /> },
-  { id: 'd_8pm', time: '08:00 PM', hour: 20, mins: 0, title: 'Dinner', detail: '3 Roti + Sabji', type: 'Food', icon: <Utensils /> },
-  { id: 's_10pm', time: '10:00 PM', hour: 22, mins: 0, title: 'Rest', detail: 'Time to sleep', type: 'None', icon: <Moon /> },
-];
+        // Custom icon mapping using Lucide global object since imports don't work directly in global HTML script
+        const Icon = ({ name, size = 24, className = "" }) => {
+            if (!window.lucide || !window.lucide.icons) return null;
+            const IconComponent = window.lucide.icons[name];
+            if (!IconComponent) return null;
+            // Create element dynamically for Lucide CDN
+            return React.createElement('i', { 
+                'data-lucide': name.toLowerCase(), 
+                style: { width: size, height: size, display: 'inline-block' },
+                className: className 
+            });
+        };
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [isVerified, setIsVerified] = useState(null);
-  const [permissionsGranted, setPermissionsGranted] = useState(false);
-  const [activeTab, setActiveTab] = useState('today');
-  const [tasks, setTasks] = useState({});
-  const [history, setHistory] = useState({});
-  const [showCameraMode, setShowCameraMode] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [facingMode, setFacingMode] = useState('user');
-  const [currentTask, setCurrentTask] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [userNote, setUserNote] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [viewMonth, setViewMonth] = useState(new Date());
+        const schedule = [
+            { id: 'h_6am', time: '06:00 AM', hour: 6, mins: 0, title: 'Morning Hydration', detail: '1 Glass Water', type: 'Liquid', icon: 'Droplets' },
+            { id: 'c_630am', time: '06:30 AM', hour: 6, mins: 30, title: 'Morning Club', detail: 'Stretching/Session', type: 'Human', icon: 'User' },
+            { id: 'a_7am', time: '07:00 AM', hour: 7, mins: 0, title: 'Afresh', detail: 'Herbalife Afresh', type: 'Product', icon: 'Zap' },
+            { id: 'b_8am', time: '08:00 AM', hour: 8, mins: 0, title: 'Breakfast', detail: 'Formula-1 (3 scoops) + ShakeMate (2 scoops)', type: 'Product', icon: 'Utensils' },
+            { id: 's_10am', time: '10:00 AM', hour: 10, mins: 0, title: 'Mid-Morning Snack', detail: '2 Bananas or Chiku', type: 'Food', icon: 'Utensils' },
+            { id: 'l_12pm', time: '12:00 PM', hour: 12, mins: 0, title: 'Lunch', detail: '4 Roti + Sabzi + Salad + Curd', type: 'Food', icon: 'Utensils' },
+            { id: 'a_1pm', time: '01:00 PM', hour: 13, mins: 0, title: 'Afresh', detail: '1 Scoop Afresh', type: 'Product', icon: 'Zap' },
+            { id: 'e_4pm', time: '04:00 PM', hour: 16, mins: 0, title: 'Evening Snack', detail: 'Tea + Healthy Snacks', type: 'Food', icon: 'Utensils' },
+            { id: 'e_5pm', time: '05:00 PM', hour: 17, mins: 0, title: 'Evening Nutrition', detail: 'Sprouts, Moong, Chana, Soaked Dry Fruits', type: 'Food', icon: 'Zap' },
+            { id: 'd_8pm', time: '08:00 PM', hour: 20, mins: 0, title: 'Dinner', detail: '3 Roti + Sabji', type: 'Food', icon: 'Utensils' },
+            { id: 's_10pm', time: '10:00 PM', hour: 22, mins: 0, title: 'Rest', detail: 'Time to sleep', type: 'None', icon: 'Moon' },
+        ];
 
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const threeRef = useRef(null);
-  const recognitionRef = useRef(null);
+        function App() {
+            const [user, setUser] = useState({ displayName: 'User', photoURL: '' }); // Auth bypass for static hosting preview
+            const [isVerified, setIsVerified] = useState(true);
+            const [permissionsGranted, setPermissionsGranted] = useState(true);
+            const [activeTab, setActiveTab] = useState('today');
+            const [tasks, setTasks] = useState({});
+            const [history, setHistory] = useState(() => {
+                const saved = localStorage.getItem('herbalife_history');
+                return saved ? JSON.parse(saved) : {};
+            });
+            const [showCameraMode, setShowCameraMode] = useState(false);
+            const [cameraActive, setCameraActive] = useState(false);
+            const [facingMode, setFacingMode] = useState('user');
+            const [currentTask, setCurrentTask] = useState(null);
+            const [userNote, setUserNote] = useState("");
+            const [showAccountMenu, setShowAccountMenu] = useState(false);
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+            const [viewMonth, setViewMonth] = useState(new Date());
 
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            });
 
-  useEffect(() => {
-    const setupAuth = async () => {
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
+            useEffect(() => {
+                const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Handle local persistence permanently even on refresh
+            useEffect(() => {
+                localStorage.setItem('herbalife_history', JSON.stringify(history));
+                const today = new Date().toISOString().split('T')[0];
+                setTasks(history[today] || {});
+            }, [history]);
+
+            const checkTimeLock = (item) => {
+                const now = currentTime;
+                const taskStart = new Date(now);
+                taskStart.setHours(item.hour, item.mins, 0, 0);
+                const taskEnd = new Date(taskStart);
+                taskEnd.setHours(taskStart.getHours() + 2);
+
+                if (now < taskStart) return 'early';
+                if (now > taskEnd) return 'expired';
+                return 'active';
+            };
+
+            const completeTask = (taskId) => {
+                const today = new Date().toISOString().split('T')[0];
+                const currentDayTasks = { ...(history[today] || {}), [taskId]: true };
+                const newHistory = { ...history, [today]: currentDayTasks };
+                setHistory(newHistory);
+            };
+
+            const chartData = useMemo(() => {
+                const year = viewMonth.getFullYear();
+                const month = viewMonth.getMonth();
+                const numDays = new Date(year, month + 1, 0).getDate();
+                return Array.from({ length: numDays }).map((_, i) => {
+                    const day = i + 1;
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    return { 
+                        day: day, 
+                        tasks: history[dateStr] ? Object.keys(history[dateStr]).length : 0 
+                    };
+                });
+            }, [history, viewMonth]);
+
+            const selectedDayTasks = useMemo(() => {
+                return history[selectedDate] || {};
+            }, [history, selectedDate]);
+
+            return (
+                <div className="flex flex-col h-screen bg-[#f8fafc] max-w-md mx-auto relative overflow-hidden font-sans shadow-2xl">
+                    <header className="bg-emerald-600 text-white p-6 rounded-b-[40px] shadow-xl relative z-30">
+                        <div className="flex justify-between items-center">
+                            <div className="relative">
+                                <button onClick={() => setShowAccountMenu(!showAccountMenu)} className="flex items-center gap-2 bg-black/10 p-1.5 pr-3 rounded-full">
+                                    <Icon name="User" size={14} />
+                                    <span className="text-[10px] font-black italic">{user.displayName}</span>
+                                    <Icon name="ChevronDown" size={12} />
+                                </button>
+                            </div>
+                            <div className="bg-white/10 px-3 py-1 rounded-full border border-white/10">
+                                <span className="text-[8px] font-black uppercase tracking-widest p-2">LIVE TRACKING</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 overflow-y-auto px-5 py-6 pb-28">
+                        {activeTab === 'today' ? (
+                            <div className="space-y-3">
+                                {schedule.map((item) => {
+                                    const isDone = tasks[item.id];
+                                    const timeStatus = checkTimeLock(item);
+                                    const isLocked = timeStatus !== 'active' && !isDone;
+
+                                    return (
+                                        <div 
+                                            key={item.id}
+                                            onClick={() => {
+                                                if (isDone || isLocked) return;
+                                                completeTask(item.id);
+                                            }}
+                                            className={`flex items-center gap-3 p-4 rounded-[28px] bg-white border-2 transition-all ${isDone ? 'border-emerald-100 opacity-60' : isLocked ? 'border-slate-100 opacity-40 bg-slate-50' : 'border-transparent shadow-sm active:scale-95'}`}
+                                        >
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDone ? 'bg-emerald-500 text-white' : isLocked ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>
+                                                {isLocked ? <Icon name="Lock" size={18} /> : <Icon name={item.icon} size={18} />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`text-[9px] font-black uppercase ${isLocked ? 'text-slate-400' : 'text-emerald-600'}`}>{item.time}</p>
+                                                <h3 className="font-bold text-slate-800 text-xs">{item.title}</h3>
+                                            </div>
+                                            <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-100'}`}>
+                                                {isDone ? <Icon name="CheckCircle2" size={16} /> : isLocked ? <div className="w-1 h-1 rounded-full bg-slate-200" /> : <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="bg-white p-5 rounded-[30px] shadow-sm">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <button onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}><Icon name="ChevronLeft" size={18}/></button>
+                                        <h3 className="font-black text-slate-800 uppercase italic text-sm">{viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+                                        <button onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}><Icon name="ChevronRight" size={18}/></button>
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-1 text-center">
+                                        {['S','M','T','W','T','F','S'].map(d => <div key={d} className="text-[8px] font-black text-slate-400 mb-1">{d}</div>)}
+                                        {Array.from({ length: new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay() }).map((_, i) => <div key={i} />)}
+                                        {Array.from({ length: new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                                            const day = i + 1;
+                                            const dateStr = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                            const completedCount = history[dateStr] ? Object.keys(history[dateStr]).length : 0;
+                                            const isSelected = selectedDate === dateStr;
+                                            return (
+                                                <button key={i} onClick={() => setSelectedDate(dateStr)} className={`p-1.5 rounded-lg text-[9px] font-black transition-all ${isSelected ? 'bg-emerald-600 text-white shadow-lg scale-110' : 'bg-slate-50 text-slate-700'}`}>
+                                                    {day}
+                                                    {completedCount > 0 && !isSelected && <div className="w-1 h-1 bg-emerald-500 rounded-full mx-auto mt-0.5" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-5 rounded-[30px] shadow-sm">
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Selected Day Details</h3>
+                                    <div className="space-y-2">
+                                        {schedule.map(item => {
+                                            const isCompleted = selectedDayTasks[item.id];
+                                            return (
+                                                <div key={item.id} className={`flex items-center gap-3 p-3 rounded-2xl ${isCompleted ? 'bg-emerald-50' : 'bg-slate-50 opacity-50'}`}>
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                                        <Icon name={item.icon} size={14} />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase leading-none">{item.time}</p>
+                                                        <h4 className="text-[10px] font-bold text-slate-700">{item.title}</h4>
+                                                    </div>
+                                                    {isCompleted ? <Icon name="CheckCircle2" size={14} className="text-emerald-500" /> : <Icon name="Circle" size={14} className="text-slate-200" />}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-2xl p-4 px-10 flex justify-between items-center rounded-t-[40px] shadow-2xl z-20">
+                        <button onClick={() => setActiveTab('today')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'today' ? 'text-emerald-600 scale-110' : 'text-slate-300'}`}><Icon name="Clock" size={24} /><span className="text-[8px] font-black uppercase">Today</span></button>
+                        <button onClick={() => setActiveTab('stats')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stats' ? 'text-emerald-600 scale-110' : 'text-slate-300'}`}><Icon name="Calendar" size={24} /><span className="text-[8px] font-black uppercase">Archive</span></button>
+                        <a href="https://herbalife-smart-wellness-studio.my.canva.site/page-3" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1 text-slate-300 hover:text-emerald-600 transition-all">
+                            <Icon name="ExternalLink" size={24} />
+                            <span className="text-[8px] font-black uppercase">Studio</span>
+                        </a>
+                    </nav>
+                </div>
+            );
         }
-      } catch (err) {
-        console.error("Auth init error", err);
-      }
-    };
-    setupAuth();
 
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        const profileDoc = doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'data');
-        const snap = await getDoc(profileDoc);
-        if (snap.exists() && snap.data().cameraVerified === true) {
-          setIsVerified(true);
-          try {
-            const status = await navigator.permissions.query({ name: 'camera' });
-            if (status.state === 'granted') setPermissionsGranted(true);
-          } catch(e) {}
-        } else {
-          setIsVerified(false);
-        }
-      } else {
-        setIsVerified(null);
-        setPermissionsGranted(false);
-      }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
       setAuthLoading(false);
     });
     return () => unsubscribe();
